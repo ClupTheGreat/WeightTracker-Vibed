@@ -14,6 +14,11 @@
       <p class="subtitle">Track bodyweight over time</p>
     </header>
 
+    <section class="card leaderboard-card">
+      <div id="leaderboard-empty" class="empty-state">Add entries to see who's winning!</div>
+      <div id="leaderboard-content" class="hidden"></div>
+    </section>
+
     <section class="card form-section">
       <form id="entry-form" autocomplete="off">
         <div class="form-row">
@@ -49,6 +54,12 @@
       <div id="loading">Loading data...</div>
       <canvas id="weight-chart" class="hidden"></canvas>
       <div id="chart-empty" class="empty-state hidden">No entries yet. Add your first weight above!</div>
+    </section>
+
+    <section class="card chart-section">
+      <h2 class="section-title">Weight Lost</h2>
+      <canvas id="loss-chart" class="hidden"></canvas>
+      <div id="loss-empty" class="empty-state hidden">Need at least two entries per person to show loss.</div>
     </section>
 
     <section class="card table-section">

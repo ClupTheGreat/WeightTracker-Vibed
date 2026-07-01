@@ -43,6 +43,46 @@ h1 {
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
 }
 
+.leaderboard-card {
+  text-align: center;
+}
+
+.leaderboard-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin: 4px 0;
+  font-size: 0.95rem;
+}
+
+.leaderboard-row .pos {
+  font-weight: 700;
+  color: #9ca3af;
+  min-width: 22px;
+}
+
+.leaderboard-row .pos.gold { color: #f59e0b; }
+.leaderboard-row .pos.silver { color: #9ca3af; }
+.leaderboard-row .pos.bronze { color: #cd7f32; }
+
+.leaderboard-row .name {
+  font-weight: 600;
+}
+
+.leaderboard-row .stat {
+  color: #6b7280;
+}
+
+.leaderboard-row .stat.positive { color: #16a34a; }
+.leaderboard-row .stat.negative { color: #dc2626; }
+
+.leaderboard-winner {
+  font-size: 1.3rem;
+  font-weight: 700;
+  padding: 8px 0 4px;
+}
+
 /* ── Form ── */
 
 .form-row {
@@ -164,7 +204,15 @@ h1 {
   font-size: 0.95rem;
 }
 
-#weight-chart {
+.section-title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #1a1a2e;
+  margin-bottom: 12px;
+}
+
+#weight-chart,
+#loss-chart {
   max-height: 400px;
 }
 

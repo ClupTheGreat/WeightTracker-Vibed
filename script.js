@@ -5,6 +5,7 @@ const BIN_URL = `https://api.jsonbin.io/v3/b/${BIN_ID}`;
 let allData = [];
 let currentUnit = 'kg';
 let chartInstance = null;
+let lossChartInstance = null;
 
 document.addEventListener('DOMContentLoaded', init);
 
@@ -54,7 +55,9 @@ function saveBin() {
 }
 
 function renderAll() {
+  renderLeaderboard(allData, currentUnit);
   renderChart(allData, currentUnit);
+  renderLossChart(allData, currentUnit);
   renderTable(allData, currentUnit);
 }
 
@@ -147,6 +150,61 @@ function updateEntry(id, name, weightKg, color) {
     });
 }
 
+function renderLeaderboard(data, unit) {
+  const emptyEl = document.getElementById('leaderboard-empty');
+  const contentEl = document.getElementById('leaderboard-content');
+
+  const byName = {};
+  data.forEach(d => {
+    if (!byName[d.name]) byName[d.name] = [];
+    byName[d.name].push(d);
+  });
+
+  const rankings = Object.entries(byName)
+    .map(([name, entries]) => {
+      entries.sort((a, b) => a.timestamp.localeCompare(b.timestamp));
+      const first = entries[0].weight;
+      const last = entries[entries.length - 1].weight;
+      const loss = unit === 'lbs' ? +((first - last) * 2.205).toFixed(1) : +(first - last).toFixed(1);
+      const latest = unit === 'lbs' ? +(last * 2.205).toFixed(1) : last;
+      return { name, loss, latest, color: entries[entries.length - 1].color };
+    })
+    .sort((a, b) => b.loss - a.loss);
+
+  if (rankings.length === 0) {
+    emptyEl.classList.remove('hidden');
+    contentEl.classList.add('hidden');
+    return;
+  }
+
+  emptyEl.classList.add('hidden');
+  contentEl.classList.remove('hidden');
+
+  const places = ['1st', '2nd', '3rd'];
+  const posClasses = ['gold', 'silver', 'bronze'];
+  const top = rankings.slice(0, 3);
+
+  const gap = rankings.length > 1 ? (rankings[0].loss - rankings[1].loss).toFixed(1) : 0;
+
+  let html = `<div class="leaderboard-winner">${escapeHtml(rankings[0].name)} &mdash; ${rankings[0].loss} ${unit} lost</div>`;
+
+  if (gap > 0) {
+    html += `<div class="leaderboard-row"><span class="stat positive">${gap} ${unit} ahead of ${escapeHtml(rankings[1].name)}</span></div>`;
+  }
+
+  if (top.length > 1) {
+    html += top.slice(1).map((r, i) =>
+      `<div class="leaderboard-row">
+        <span class="pos ${posClasses[i]}">${places[i + 1]}</span>
+        <span class="name" style="color:${r.color}">${escapeHtml(r.name)}</span>
+        <span class="stat ${r.loss >= 0 ? 'positive' : 'negative'}">${r.loss >= 0 ? '−' : '+'}${Math.abs(r.loss)} ${unit}</span>
+      </div>`
+    ).join('');
+  }
+
+  contentEl.innerHTML = html;
+}
+
 function renderChart(data, unit) {
   const canvas = document.getElementById('weight-chart');
   const emptyEl = document.getElementById('chart-empty');
@@ -190,15 +248,29 @@ function renderChart(data, unit) {
       label: name,
       data: allDates.map(d => dateMap[d] !== undefined ? dateMap[d] : null),
       borderColor: color,
-      backgroundColor: color + '15',
+      _color: color,
+      backgroundColor: ctx => {
+        const c = ctx.dataset._color;
+        if (!ctx.chart.chartArea) return c + '40';
+        const g = ctx.chart.ctx.createLinearGradient(0, ctx.chart.chartArea.top, 0, ctx.chart.chartArea.bottom);
+        g.addColorStop(0, c + '80');
+        g.addColorStop(1, c + '02');
+        return g;
+      },
       pointBackgroundColor: color,
       pointBorderColor: color,
       pointRadius: 5,
       pointHoverRadius: 7,
-      spanGaps: false,
+      spanGaps: true,
       tension: 0.15,
-      fill: false
+      fill: true
     };
+  });
+
+  datasets.sort((a, b) => {
+    const aLast = [...a.data].reverse().find(v => v !== null) ?? Infinity;
+    const bLast = [...b.data].reverse().find(v => v !== null) ?? Infinity;
+    return aLast - bLast;
   });
 
   chartInstance = new Chart(canvas, {
@@ -228,6 +300,115 @@ function renderChart(data, unit) {
         y: {
           title: { display: true, text: `Weight (${unitLabel})`, font: { size: 11 } },
           beginAtZero: false,
+          ticks: { font: { size: 11 } }
+        }
+      }
+    }
+  });
+}
+
+function renderLossChart(data, unit) {
+  const canvas = document.getElementById('loss-chart');
+  const emptyEl = document.getElementById('loss-empty');
+
+  if (lossChartInstance) {
+    lossChartInstance.destroy();
+    lossChartInstance = null;
+  }
+
+  const byName = {};
+  data.forEach(d => {
+    if (!byName[d.name]) byName[d.name] = [];
+    byName[d.name].push(d);
+  });
+
+  const namesWithLoss = Object.entries(byName).filter(([, entries]) => entries.length >= 2);
+
+  if (data.length === 0 || namesWithLoss.length === 0) {
+    canvas.classList.add('hidden');
+    emptyEl.classList.remove('hidden');
+    return;
+  }
+
+  canvas.classList.remove('hidden');
+  emptyEl.classList.add('hidden');
+
+  const allDates = [...new Set(data.map(d => d.timestamp.split(' ')[0]))].sort();
+  const unitLabel = unit;
+
+  const datasets = namesWithLoss.map(([name, entries]) => {
+    entries.sort((a, b) => a.timestamp.localeCompare(b.timestamp));
+    const firstWeight = entries[0].weight;
+    const color = entries[entries.length - 1].color;
+
+    const dateMap = {};
+    entries.forEach(e => {
+      const date = e.timestamp.split(' ')[0];
+      const loss = unit === 'lbs'
+        ? +((firstWeight - e.weight) * 2.205).toFixed(1)
+        : +(firstWeight - e.weight).toFixed(1);
+      dateMap[date] = loss;
+    });
+
+    return {
+      label: name,
+      data: allDates.map(d => dateMap[d] !== undefined ? dateMap[d] : null),
+      borderColor: color,
+      _color: color,
+      backgroundColor: ctx => {
+        const c = ctx.dataset._color;
+        if (!ctx.chart.chartArea) return c + '40';
+        const g = ctx.chart.ctx.createLinearGradient(0, ctx.chart.chartArea.top, 0, ctx.chart.chartArea.bottom);
+        g.addColorStop(0, c + '80');
+        g.addColorStop(1, c + '02');
+        return g;
+      },
+      pointBackgroundColor: color,
+      pointBorderColor: color,
+      pointRadius: 4,
+      pointHoverRadius: 6,
+      spanGaps: true,
+      tension: 0.15,
+      fill: true
+    };
+  });
+
+  datasets.sort((a, b) => {
+    const aLast = [...a.data].reverse().find(v => v !== null) ?? Infinity;
+    const bLast = [...b.data].reverse().find(v => v !== null) ?? Infinity;
+    return aLast - bLast;
+  });
+
+  lossChartInstance = new Chart(canvas, {
+    type: 'line',
+    data: { labels: allDates, datasets },
+    options: {
+      responsive: true,
+      maintainAspectRatio: true,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: {
+          position: 'top',
+          labels: { usePointStyle: true, padding: 16, font: { size: 12 } }
+        },
+        tooltip: {
+          callbacks: {
+            label: ctx => {
+              const val = ctx.parsed.y;
+              const dir = val >= 0 ? 'lost' : 'gained';
+              return `${ctx.dataset.label}: ${Math.abs(val)} ${unitLabel} ${dir}`;
+            }
+          }
+        }
+      },
+      scales: {
+        x: {
+          title: { display: true, text: 'Date', font: { size: 11 } },
+          ticks: { font: { size: 11 } },
+          grid: { display: false }
+        },
+        y: {
+          title: { display: true, text: `Weight Lost (${unitLabel})`, font: { size: 11 } },
           ticks: { font: { size: 11 } }
         }
       }
