@@ -478,7 +478,7 @@ function enterEditMode(id, unit) {
   row.innerHTML = `
     <td>${escapeHtml(entry.timestamp)}</td>
     <td><input type="text" class="edit-name" value="${escapeHtml(entry.name)}"></td>
-    <td><input type="number" step="0.1" class="edit-weight" value="${displayWeight}"></td>
+    <td><input type="number" step="0.001" class="edit-weight" value="${displayWeight}"></td>
     <td><input type="color" class="edit-color" value="${entry.color}"></td>
     <td>
       <div class="action-btns">
