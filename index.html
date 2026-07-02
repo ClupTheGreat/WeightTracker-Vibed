@@ -14,69 +14,97 @@
       <p class="subtitle">Track bodyweight over time</p>
     </header>
 
-    <section class="card leaderboard-card">
-      <div id="leaderboard-empty" class="empty-state">Add entries to see who's winning!</div>
-      <div id="leaderboard-content" class="hidden"></div>
-    </section>
+    <div class="app-layout">
+      <main class="main-content">
+        <section class="card leaderboard-card">
+          <div id="leaderboard-empty" class="empty-state">Add entries to see who's winning!</div>
+          <div id="leaderboard-content" class="hidden"></div>
+        </section>
 
-    <section class="card form-section">
-      <form id="entry-form" autocomplete="off">
-        <div class="form-row">
-          <div class="field name-field">
-            <label for="name">Name</label>
-            <input type="text" id="name" placeholder="e.g. Alice" required>
-          </div>
-          <div class="field weight-field">
-            <label for="weight">Weight</label>
-            <input type="number" id="weight" step="0.1" placeholder="kg" required>
-          </div>
-          <div class="field unit-field">
-            <label>Unit</label>
-            <div class="toggle-group">
-              <button type="button" class="toggle-btn active" data-unit="kg">kg</button>
-              <button type="button" class="toggle-btn" data-unit="lbs">lbs</button>
+        <section class="card form-section">
+          <form id="entry-form" autocomplete="off">
+            <div class="form-row">
+              <div class="field name-field">
+                <label for="name">Name</label>
+                <input type="text" id="name" placeholder="e.g. Alice" required>
+              </div>
+              <div class="field weight-field">
+                <label for="weight">Weight</label>
+                <input type="number" id="weight" step="0.01" placeholder="kg" required>
+              </div>
+              <div class="field unit-field">
+                <label>Unit</label>
+                <div class="toggle-group">
+                  <button type="button" class="toggle-btn active" data-unit="kg">kg</button>
+                  <button type="button" class="toggle-btn" data-unit="lbs">lbs</button>
+                </div>
+              </div>
+              <div class="field color-field">
+                <label for="color">Color</label>
+                <input type="color" id="color" value="#4A90D9">
+              </div>
+              <div class="field submit-field">
+                <button type="submit" id="submit-btn">Add Entry</button>
+              </div>
             </div>
+          </form>
+        </section>
+
+        <div id="error" class="error card hidden"></div>
+
+        <section class="card chart-section">
+          <div id="loading">Loading data...</div>
+          <canvas id="weight-chart" class="hidden"></canvas>
+          <div id="chart-empty" class="empty-state hidden">No entries yet. Add your first weight above!</div>
+        </section>
+
+        <section class="card chart-section">
+          <h2 class="section-title">Weight Lost</h2>
+          <canvas id="loss-chart" class="hidden"></canvas>
+          <div id="loss-empty" class="empty-state hidden">Need at least two entries per person to show loss.</div>
+        </section>
+
+        <section class="card table-section">
+          <table id="entries-table">
+            <thead>
+              <tr>
+                <th>Date &amp; Time (IST)</th>
+                <th>Name</th>
+                <th>Weight</th>
+                <th>Color</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="table-body"></tbody>
+          </table>
+          <div id="table-empty" class="empty-state">No entries yet.</div>
+        </section>
+      </main>
+
+      <aside class="sidebar">
+        <div class="card sidebar-card">
+          <h2 class="section-title">Names</h2>
+          <div class="search-row">
+            <input type="text" id="search-input" class="search-input" placeholder="Filter names...">
+            <button id="search-clear" class="btn search-clear">Clear</button>
           </div>
-          <div class="field color-field">
-            <label for="color">Color</label>
-            <input type="color" id="color" value="#4A90D9">
+          <div id="search-actions" class="search-actions hidden">
+            <button id="show-all-btn" class="btn show-all-btn">Show All</button>
           </div>
-          <div class="field submit-field">
-            <button type="submit" id="submit-btn">Add Entry</button>
+          <div id="search-name-list" class="search-name-list"></div>
+        </div>
+
+        <div class="card sidebar-card">
+          <h2 class="section-title">Activity</h2>
+          <div id="heatmap"></div>
+          <div class="heatmap-legend">
+            <span><span class="legend-dot" style="background:#e5e7eb"></span> No entry</span>
+            <span><span class="legend-dot" style="background:#16a34a"></span> Loss</span>
+            <span><span class="legend-dot" style="background:#dc2626"></span> Gain</span>
           </div>
         </div>
-      </form>
-    </section>
-
-    <div id="error" class="error card hidden"></div>
-
-    <section class="card chart-section">
-      <div id="loading">Loading data...</div>
-      <canvas id="weight-chart" class="hidden"></canvas>
-      <div id="chart-empty" class="empty-state hidden">No entries yet. Add your first weight above!</div>
-    </section>
-
-    <section class="card chart-section">
-      <h2 class="section-title">Weight Lost</h2>
-      <canvas id="loss-chart" class="hidden"></canvas>
-      <div id="loss-empty" class="empty-state hidden">Need at least two entries per person to show loss.</div>
-    </section>
-
-    <section class="card table-section">
-      <table id="entries-table">
-        <thead>
-          <tr>
-            <th>Date &amp; Time (IST)</th>
-            <th>Name</th>
-            <th>Weight</th>
-            <th>Color</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody id="table-body"></tbody>
-      </table>
-      <div id="table-empty" class="empty-state">No entries yet.</div>
-    </section>
+      </aside>
+    </div>
   </div>
 
   <script src="script.js"></script>

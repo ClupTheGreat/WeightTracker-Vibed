@@ -14,9 +14,186 @@ body {
 }
 
 .container {
-  max-width: 960px;
-  margin: 0 auto;
-  padding: 24px 16px;
+  max-width: 1260px;
+  margin: 40px auto;
+  padding: 0 20px;
+}
+
+.app-layout {
+  display: flex;
+  gap: 24px;
+  align-items: flex-start;
+}
+
+.main-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.sidebar {
+  width: 280px;
+  flex-shrink: 0;
+}
+
+.sidebar-card {
+  margin-bottom: 20px;
+}
+
+.search-row {
+  display: flex;
+  gap: 8px;
+}
+
+.search-input {
+  flex: 1;
+  padding: 8px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 14px;
+  outline: none;
+}
+
+.search-input:focus {
+  border-color: #4A90D9;
+  box-shadow: 0 0 0 2px rgba(74,144,217,0.2);
+}
+
+.search-clear {
+  padding: 8px 14px;
+  font-size: 14px;
+}
+
+.search-name-list {
+  margin-top: 8px;
+  max-height: 240px;
+  overflow-y: auto;
+}
+
+.search-name-item {
+  display: flex;
+  align-items: center;
+  padding: 4px 6px;
+  font-size: 14px;
+  cursor: pointer;
+  border-radius: 4px;
+}
+
+.search-name-item:hover {
+  background: #f3f4f6;
+}
+
+.search-name-checkbox {
+  margin-right: 8px;
+  cursor: pointer;
+}
+
+.search-name-label {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.search-csv-btn {
+  padding: 2px 8px;
+  font-size: 11px;
+  cursor: pointer;
+  background: #e5e7eb;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  color: #374151;
+  flex-shrink: 0;
+}
+
+.search-csv-btn:hover {
+  background: #d1d5db;
+}
+
+.search-actions {
+  margin-top: 8px;
+}
+
+.show-all-btn {
+  width: 100%;
+  padding: 6px;
+  font-size: 13px;
+}
+
+.search-empty {
+  padding: 8px 0;
+  color: #9ca3af;
+  font-size: 13px;
+  text-align: center;
+}
+
+#heatmap {
+  overflow-x: auto;
+  padding: 4px 0;
+}
+
+.heatmap-grid {
+  display: inline-grid;
+  gap: 2px;
+}
+
+.heatmap-label {
+  font-size: 9px;
+  color: #6b7280;
+  line-height: 10px;
+}
+
+.heatmap-spacer {
+  width: 10px;
+  height: 10px;
+}
+
+.heatmap-cell {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+}
+
+.heatmap-cell.outside {
+  background: transparent;
+}
+
+.heatmap-cell.empty {
+  background: #e5e7eb;
+}
+
+.heatmap-cell.loss {
+  background: #16a34a;
+}
+
+.heatmap-cell.gain {
+  background: #dc2626;
+}
+
+.heatmap-legend {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  margin-top: 8px;
+  font-size: 11px;
+  color: #6b7280;
+}
+
+.legend-dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  vertical-align: middle;
+  margin-right: 3px;
+}
+
+@media (max-width: 768px) {
+  .app-layout {
+    flex-direction: column;
+  }
+  .sidebar {
+    width: 100%;
+  }
 }
 
 header {

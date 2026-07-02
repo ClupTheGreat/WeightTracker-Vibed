@@ -6,6 +6,8 @@ let allData = [];
 let currentUnit = 'kg';
 let chartInstance = null;
 let lossChartInstance = null;
+let searchTerm = '';
+let selectedNames = new Set();
 
 document.addEventListener('DOMContentLoaded', init);
 
@@ -13,6 +15,7 @@ function init() {
   setupForm();
   setupUnitToggle();
   setupTableDelegation();
+  setupSearch();
   fetchAndRender();
 }
 
@@ -55,10 +58,108 @@ function saveBin() {
 }
 
 function renderAll() {
-  renderLeaderboard(allData, currentUnit);
-  renderChart(allData, currentUnit);
-  renderLossChart(allData, currentUnit);
-  renderTable(allData, currentUnit);
+  const filtered = getFilteredData();
+  renderLeaderboard(filtered, currentUnit);
+  renderChart(filtered, currentUnit);
+  renderLossChart(filtered, currentUnit);
+  renderTable(filtered, currentUnit);
+  renderHeatmap(filtered);
+  renderNameList();
+}
+
+function getFilteredData() {
+  if (selectedNames.size === 0) return allData;
+  return allData.filter(d => selectedNames.has(d.name));
+}
+
+function setupSearch() {
+  const input = document.getElementById('search-input');
+  const clear = document.getElementById('search-clear');
+  const showAll = document.getElementById('show-all-btn');
+
+  input.addEventListener('input', () => {
+    searchTerm = input.value.trim().toLowerCase();
+    renderNameList();
+  });
+
+  clear.addEventListener('click', () => {
+    input.value = '';
+    searchTerm = '';
+    selectedNames.clear();
+    renderAll();
+  });
+
+  showAll.addEventListener('click', () => {
+    selectedNames.clear();
+    renderAll();
+  });
+
+  document.getElementById('search-name-list').addEventListener('click', e => {
+    const cb = e.target.closest('.search-name-checkbox');
+    if (cb) {
+      const name = cb.dataset.name;
+      if (cb.checked) selectedNames.add(name);
+      else selectedNames.delete(name);
+      renderAll();
+      return;
+    }
+    const csvBtn = e.target.closest('.search-csv-btn');
+    if (csvBtn) {
+      e.preventDefault();
+      downloadCSV(csvBtn.dataset.name);
+    }
+  });
+}
+
+function renderNameList() {
+  const container = document.getElementById('search-name-list');
+  const actions = document.getElementById('search-actions');
+
+  const allNames = [...new Set(allData.map(d => d.name))].sort((a, b) =>
+    a.toLowerCase().localeCompare(b.toLowerCase())
+  );
+
+  const filtered = searchTerm
+    ? allNames.filter(n => n.toLowerCase().includes(searchTerm))
+    : allNames;
+
+  if (allNames.length === 0) {
+    container.innerHTML = '';
+    actions.classList.add('hidden');
+    return;
+  }
+
+  if (filtered.length === 0) {
+    container.innerHTML = '<div class="search-empty">No names match</div>';
+    actions.classList.add('hidden');
+    return;
+  }
+
+  actions.classList.toggle('hidden', selectedNames.size === 0);
+
+  container.innerHTML = filtered.map(name => {
+    const checked = selectedNames.has(name) ? 'checked' : '';
+    return '<label class="search-name-item">' +
+      '<input type="checkbox" class="search-name-checkbox" data-name="' + escapeHtml(name) + '" ' + checked + '>' +
+      '<span class="search-name-label">' + escapeHtml(name) + '</span>' +
+      '<button class="search-csv-btn" data-name="' + escapeHtml(name) + '">CSV</button>' +
+      '</label>';
+  }).join('');
+}
+
+function downloadCSV(name) {
+  const entries = allData.filter(d => d.name === name)
+    .sort((a, b) => a.timestamp.localeCompare(b.timestamp));
+  if (entries.length === 0) return;
+  const headers = 'Timestamp,Name,Weight (kg),Color\n';
+  const rows = entries.map(e => e.timestamp + ',' + e.name + ',' + e.weight + ',' + e.color).join('\n');
+  const blob = new Blob([headers + rows], { type: 'text/csv' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = name.replace(/\s+/g, '_') + '_weight_data.csv';
+  a.click();
+  URL.revokeObjectURL(url);
 }
 
 function setupForm() {
@@ -414,6 +515,104 @@ function renderLossChart(data, unit) {
       }
     }
   });
+}
+
+function renderHeatmap(data) {
+  const el = document.getElementById('heatmap');
+
+  const fmt = d => {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  };
+
+  if (data.length === 0) {
+    el.innerHTML = '';
+    return;
+  }
+
+  const byDate = {};
+  data.forEach(d => {
+    const ds = d.timestamp.split(' ')[0];
+    if (!byDate[ds]) byDate[ds] = [];
+    byDate[ds].push(d);
+  });
+
+  const sorted = [...data].sort((a, b) => a.timestamp.localeCompare(b.timestamp));
+  const personEntries = {};
+  sorted.forEach(d => {
+    if (!personEntries[d.name]) personEntries[d.name] = [];
+    personEntries[d.name].push(d);
+  });
+
+  const [y0, m0, d0] = sorted[0].timestamp.split(' ')[0].split('-').map(Number);
+  const start = new Date(y0, m0 - 1, d0);
+  start.setHours(0, 0, 0, 0);
+
+  const today = new Date();
+  today.setHours(23, 59, 59, 999);
+
+  const dayColor = {};
+  for (let d = new Date(start); d <= today; d.setDate(d.getDate() + 1)) {
+    const ds = fmt(d);
+    const entries = byDate[ds] || [];
+    if (entries.length === 0) { dayColor[ds] = 'empty'; continue; }
+    let gains = 0, losses = 0;
+    entries.forEach(e => {
+      const list = personEntries[e.name] || [];
+      const idx = list.findIndex(x => x.id === e.id);
+      if (idx > 0) {
+        if (e.weight < list[idx - 1].weight) losses++;
+        else if (e.weight > list[idx - 1].weight) gains++;
+      }
+    });
+    dayColor[ds] = losses > gains ? 'loss' : gains > losses ? 'gain' : 'empty';
+  }
+
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const showDays = ['','Mon','','Wed','','Fri',''];
+
+  const gridStart = new Date(start);
+  gridStart.setDate(gridStart.getDate() - start.getDay());
+  const weeks = Math.ceil((+today - +gridStart + 1) / (7 * 86400000));
+
+  const parts = [];
+  const placed = {};
+
+  for (let row = 0; row < 8; row++) {
+    for (let col = 0; col <= weeks; col++) {
+      if (row === 0 && col === 0) {
+        parts.push('<div class="heatmap-spacer"></div>');
+      } else if (row === 0) {
+        const d = new Date(gridStart);
+        d.setDate(d.getDate() + (col - 1) * 7 + 3);
+        const key = d.getFullYear() + '-' + d.getMonth();
+        if (!placed[key]) {
+          placed[key] = true;
+          parts.push('<div class="heatmap-label">' + months[d.getMonth()] + '</div>');
+        } else {
+          parts.push('<div class="heatmap-spacer"></div>');
+        }
+      } else if (col === 0) {
+        const label = showDays[row - 1];
+        parts.push('<div class="heatmap-label">' + label + '</div>');
+      } else {
+        const offset = (col - 1) * 7 + (row - 1);
+        const d = new Date(gridStart);
+        d.setDate(d.getDate() + offset);
+        const ds = fmt(d);
+        if (d < start || d > today) {
+          parts.push('<div class="heatmap-cell outside"></div>');
+        } else {
+          const cls = dayColor[ds] || 'empty';
+          parts.push('<div class="heatmap-cell ' + cls + '" title="' + ds + '"></div>');
+        }
+      }
+    }
+  }
+
+  el.innerHTML = '<div class="heatmap-grid" style="grid-template-columns:28px repeat(' + weeks + ',10px)">' + parts.join('') + '</div>';
 }
 
 function setupTableDelegation() {
