@@ -386,6 +386,14 @@ function renderChart(data, unit) {
     return aLast - bLast;
   });
 
+  const allValues = data.map(d => unit === 'lbs' ? d.weight * 2.205 : d.weight);
+  const dataMin = Math.min(...allValues);
+  const dataMax = Math.max(...allValues);
+  const dataRange = dataMax - dataMin;
+  const padding = Math.max(dataRange * 0.15, 5);
+  const yMin = Math.max(0, +(dataMin - padding).toFixed(1));
+  const yMax = +(dataMax + padding).toFixed(1);
+
   chartInstance = new Chart(canvas, {
     type: 'line',
     data: { labels: allDates, datasets },
@@ -412,7 +420,8 @@ function renderChart(data, unit) {
         },
         y: {
           title: { display: true, text: `Weight (${unitLabel})`, font: { size: 11 } },
-          beginAtZero: false,
+          min: yMin,
+          max: yMax,
           ticks: { font: { size: 11 } }
         }
       }
