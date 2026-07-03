@@ -163,6 +163,18 @@ function downloadCSV(name) {
 }
 
 function setupForm() {
+  const nameInput = document.getElementById('name');
+  const colorInput = document.getElementById('color');
+
+  nameInput.addEventListener('input', () => {
+    const name = nameInput.value.trim().toLowerCase();
+    if (!name) return;
+    const entries = allData.filter(d => d.name.toLowerCase() === name);
+    if (entries.length === 0) return;
+    entries.sort((a, b) => b.timestamp.localeCompare(a.timestamp));
+    colorInput.value = entries[0].color;
+  });
+
   document.getElementById('entry-form').addEventListener('submit', e => {
     e.preventDefault();
     submitEntry();
@@ -379,7 +391,7 @@ function renderChart(data, unit) {
     data: { labels: allDates, datasets },
     options: {
       responsive: true,
-      maintainAspectRatio: true,
+      maintainAspectRatio: false,
       interaction: { mode: 'index', intersect: false },
       plugins: {
         legend: {
@@ -485,7 +497,7 @@ function renderLossChart(data, unit) {
     data: { labels: allDates, datasets },
     options: {
       responsive: true,
-      maintainAspectRatio: true,
+      maintainAspectRatio: false,
       interaction: { mode: 'index', intersect: false },
       plugins: {
         legend: {
