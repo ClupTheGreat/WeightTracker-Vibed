@@ -6,6 +6,7 @@ let allData = [];
 let currentUnit = 'kg';
 let chartInstance = null;
 let lossChartInstance = null;
+let pctChartInstance = null;
 let searchTerm = '';
 let selectedNames = new Set();
 
@@ -62,6 +63,7 @@ function renderAll() {
   renderLeaderboard(filtered, currentUnit);
   renderChart(filtered, currentUnit);
   renderLossChart(filtered, currentUnit);
+  renderPctChart(filtered);
   renderTable(filtered, currentUnit);
   renderHeatmap(filtered);
   renderNameList();
@@ -532,6 +534,112 @@ function renderLossChart(data, unit) {
         y: {
           title: { display: true, text: `Weight Lost (${unitLabel})`, font: { size: 11 } },
           ticks: { font: { size: 11 } }
+        }
+      }
+    }
+  });
+}
+
+function renderPctChart(data) {
+  const canvas = document.getElementById('pct-chart');
+  const emptyEl = document.getElementById('pct-empty');
+
+  if (pctChartInstance) {
+    pctChartInstance.destroy();
+    pctChartInstance = null;
+  }
+
+  const byName = {};
+  data.forEach(d => {
+    if (!byName[d.name]) byName[d.name] = [];
+    byName[d.name].push(d);
+  });
+
+  const namesWithPct = Object.entries(byName).filter(([, entries]) => entries.length >= 2);
+
+  if (data.length === 0 || namesWithPct.length === 0) {
+    canvas.classList.add('hidden');
+    emptyEl.classList.remove('hidden');
+    return;
+  }
+
+  canvas.classList.remove('hidden');
+  emptyEl.classList.add('hidden');
+
+  const allDates = [...new Set(data.map(d => d.timestamp.split(' ')[0]))].sort();
+
+  const datasets = namesWithPct.map(([name, entries]) => {
+    entries.sort((a, b) => a.timestamp.localeCompare(b.timestamp));
+    const firstWeight = entries[0].weight;
+    const color = entries[entries.length - 1].color;
+
+    const dateMap = {};
+    entries.forEach(e => {
+      const date = e.timestamp.split(' ')[0];
+      const pct = +(((firstWeight - e.weight) / firstWeight) * 100).toFixed(2);
+      dateMap[date] = pct;
+    });
+
+    return {
+      label: name,
+      data: allDates.map(d => dateMap[d] !== undefined ? dateMap[d] : null),
+      borderColor: color,
+      _color: color,
+      backgroundColor: ctx => {
+        const c = ctx.dataset._color;
+        if (!ctx.chart.chartArea) return c + '40';
+        const g = ctx.chart.ctx.createLinearGradient(0, ctx.chart.chartArea.top, 0, ctx.chart.chartArea.bottom);
+        g.addColorStop(0, c + '80');
+        g.addColorStop(1, c + '02');
+        return g;
+      },
+      pointBackgroundColor: color,
+      pointBorderColor: color,
+      pointRadius: 4,
+      pointHoverRadius: 6,
+      spanGaps: true,
+      tension: 0.15,
+      fill: true
+    };
+  });
+
+  datasets.sort((a, b) => {
+    const aLast = [...a.data].reverse().find(v => v !== null) ?? -Infinity;
+    const bLast = [...b.data].reverse().find(v => v !== null) ?? -Infinity;
+    return bLast - aLast;
+  });
+
+  pctChartInstance = new Chart(canvas, {
+    type: 'line',
+    data: { labels: allDates, datasets },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: {
+          position: 'top',
+          labels: { usePointStyle: true, padding: 16, font: { size: 12 } }
+        },
+        tooltip: {
+          callbacks: {
+            label: ctx => {
+              const val = ctx.parsed.y;
+              const dir = val >= 0 ? 'lost' : 'gained';
+              return `${ctx.dataset.label}: ${Math.abs(val)}% ${dir}`;
+            }
+          }
+        }
+      },
+      scales: {
+        x: {
+          title: { display: true, text: 'Date', font: { size: 11 } },
+          ticks: { font: { size: 11 } },
+          grid: { display: false }
+        },
+        y: {
+          title: { display: true, text: 'Weight Lost (%)', font: { size: 11 } },
+          ticks: { font: { size: 11 }, callback: v => v + '%' }
         }
       }
     }
