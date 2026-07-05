@@ -3,6 +3,7 @@ const ACCESS_KEY = '$2a$10$A3yJmomNl/6gUM5m82DnbuSfG2/Rg6OzNh5e5b9LLj24BCdI5GcO2
 const BIN_URL = `https://api.jsonbin.io/v3/b/${BIN_ID}`;
 
 let allData = [];
+let allMessages = [];
 let currentUnit = 'kg';
 let chartInstance = null;
 let lossChartInstance = null;
@@ -17,6 +18,7 @@ function init() {
   setupUnitToggle();
   setupTableDelegation();
   setupSearch();
+  setupChat();
   fetchAndRender();
 }
 
@@ -37,6 +39,12 @@ function fetchAndRender() {
         weight: Number(d.weight),
         color: String(d.color)
       }));
+      allMessages = (res.record.messages || []).map(m => ({
+        id: String(m.id),
+        timestamp: String(m.timestamp),
+        name: String(m.name),
+        text: String(m.text)
+      }));
       renderAll();
       showLoading(false);
     })
@@ -51,7 +59,7 @@ function saveBin() {
   return fetch(BIN_URL, {
     method: 'PUT',
     headers: { 'X-Access-Key': ACCESS_KEY, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ entries: allData })
+    body: JSON.stringify({ entries: allData, messages: allMessages })
   }).then(r => {
     if (!r.ok) throw new Error(`HTTP ${r.status}`);
     return r.json();
@@ -67,6 +75,7 @@ function renderAll() {
   renderTable(filtered, currentUnit);
   renderHeatmap(filtered);
   renderNameList();
+  renderChat();
 }
 
 function getFilteredData() {
@@ -162,6 +171,52 @@ function downloadCSV(name) {
   a.download = name.replace(/\s+/g, '_') + '_weight_data.csv';
   a.click();
   URL.revokeObjectURL(url);
+}
+
+function setupChat() {
+  const chatName = document.getElementById('chat-name-input');
+  const weightName = document.getElementById('name');
+
+  const saved = localStorage.getItem('wt_username');
+  if (saved) {
+    chatName.value = saved;
+    weightName.value = saved;
+  }
+
+  chatName.addEventListener('input', () => {
+    const val = chatName.value.trim();
+    localStorage.setItem('wt_username', val);
+    weightName.value = val;
+  });
+
+  document.getElementById('chat-form').addEventListener('submit', e => {
+    e.preventDefault();
+    submitMessage();
+  });
+}
+
+function submitMessage() {
+  const input = document.getElementById('chat-input');
+  const text = input.value.trim();
+  if (!text) return;
+
+  const name = document.getElementById('chat-name-input').value.trim() || 'Anonymous';
+
+  const msg = {
+    id: crypto.randomUUID(),
+    timestamp: getISTTimestamp(),
+    name,
+    text
+  };
+  allMessages.push(msg);
+  input.value = '';
+
+  saveBin()
+    .then(() => renderChat())
+    .catch(() => {
+      allMessages.pop();
+      showError('Failed to send message');
+    });
 }
 
 function setupForm() {
@@ -644,6 +699,29 @@ function renderPctChart(data) {
       }
     }
   });
+}
+
+function renderChat() {
+  const container = document.getElementById('chat-messages');
+
+  if (allMessages.length === 0) {
+    container.innerHTML = '<div class="chat-empty">No messages yet. Say hello!</div>';
+    return;
+  }
+
+  const sorted = [...allMessages].sort((a, b) => a.timestamp.localeCompare(b.timestamp));
+
+  container.innerHTML = sorted.map(m =>
+    '<div class="chat-message">' +
+      '<div class="chat-head">' +
+        '<span class="chat-name">' + escapeHtml(m.name) + '</span>' +
+        '<span class="chat-time">' + escapeHtml(m.timestamp) + '</span>' +
+      '</div>' +
+      '<div class="chat-text">' + escapeHtml(m.text) + '</div>' +
+    '</div>'
+  ).join('');
+
+  container.scrollTop = container.scrollHeight;
 }
 
 function renderHeatmap(data) {
